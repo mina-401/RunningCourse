@@ -22,29 +22,51 @@ $(document).ready(function () {
   };
 
 
-  let waypoints = []; // 경유지 마커 배열
+  // 경유지 정보 저장용 배열과 지오코더 변수
+  let waypoints = [];
+  let geocoder; // 추가
 
   function addMapClickEvent() {
-
-    console.log("addMapClickEvent 실행됨");
+    geocoder = new kakao.maps.services.Geocoder(); // 추가
 
     kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
       const pos = mouseEvent.latLng;
 
-      const waypointMarker = new kakao.maps.Marker({
-        map: map,
-        position: pos
-      });
+      // 좌표 → 주소 변환
+      geocoder.coord2Address(pos.getLng(), pos.getLat(), function(result, status) {
+        let placeName = '알 수 없는 위치';
 
-      waypoints.push(waypointMarker);
-      console.log("경유지 추가:", pos.getLat(), pos.getLng());
-      showStatus(`경유지 ${waypoints.length}개 추가됨`);
+        if (status === kakao.maps.services.Status.OK) {
+          const addr = result[0];
+          // 도로명 있으면 도로명, 없으면 지번
+          placeName = addr.road_address
+            ? addr.road_address.building_name || addr.road_address.address_name
+            : addr.address.address_name;
+        }
+
+        // 마커 생성
+        const waypointMarker = new kakao.maps.Marker({
+          map: map,
+          position: pos
+        });
+
+        // 말풍선 인포윈도우
+        const infoWindow = new kakao.maps.InfoWindow({
+          content: `<div style="padding:6px 10px;font-size:12px;font-weight:700;white-space:nowrap;">📍 ${placeName}</div>`
+        });
+        infoWindow.open(map, waypointMarker);
+
+        waypoints.push({ marker: waypointMarker, infoWindow, name: placeName });
+        showStatus(`경유지 ${waypoints.length}: ${placeName}`);
+      });
     });
   }
 
 
+  // 초기화 함수
   let map, ps, marker;
 
+  // 지도 초기화 및 현재 위치 표시
  function initMap() {
   console.log("initMap 실행됨");
 
@@ -106,11 +128,12 @@ $(document).ready(function () {
   }
 }
 
+// 위치 이동 함수
   function moveToLocation(pos, message) {
     console.log("moveToLocation 호출됨", pos);
 
     if (!map) {
-      console.log("❌ map 없음");
+      console.log("map 없음");
       return;
     }
 
@@ -128,10 +151,11 @@ $(document).ready(function () {
   }
 
 
-
+// 검색 기능
   $('#btn-search').on('click', doSearch);
   $('#search-input').on('keypress', e => { if (e.key === 'Enter') doSearch(); });
 
+  // 장소 검색 함수
   function doSearch() {
     const keyword = $('#search-input').val().trim();
     if (!keyword) return;
@@ -159,6 +183,7 @@ $(document).ready(function () {
     });
   }
 
+  // 현재 위치로 이동 버튼
   $('#btn-locate').on('click', () => {
     navigator.geolocation.getCurrentPosition(pos => {
       const myPos = new kakao.maps.LatLng(
@@ -170,6 +195,7 @@ $(document).ready(function () {
     });
   });
 
+  // 상태 메시지 표시 함수
   let statusTimer;
   function showStatus(msg) {
     clearTimeout(statusTimer);
