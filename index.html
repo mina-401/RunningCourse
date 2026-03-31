@@ -7,23 +7,26 @@
 
 <link rel="stylesheet" href="css/style.css">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-<script src="js/app.js" defer></script>
 </head>
 
 <body>
 
-<div id="header">
-  <div class="logo">KAKAO MAP</div>
-  <div class="search-wrap">
-    <input id="search-input" type="text" placeholder="장소를 검색하세요">
-    <button class="btn-search" id="btn-search">검색</button>
+  <div id="header">
+    <div class="logo">KAKAO MAP</div>
+    <div class="search-wrap">
+      <input id="search-input" type="text" placeholder="장소를 검색하세요">
+      <button class="btn-search" id="btn-search">검색</button>
+    </div>
+    <button class="btn-locate" id="btn-locate">📍</button>
   </div>
-  <button class="btn-locate" id="btn-locate">📍</button>
-</div>
 
-<div id="map"></div>
-<div id="status"></div>
+  <div id="map" style="width:100%; height:400px;"></div>
+  <div id="status"></div>
+
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="js/app.js" defer></script>
 
 </body>
 </html>
