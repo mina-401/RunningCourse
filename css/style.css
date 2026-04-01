@@ -163,14 +163,37 @@ body {
   overflow-y: auto;
 }
 
+
 .course-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: #aaa;
 }
 
+.course-item span {
+  flex: 1;
+  text-align: left;
+}
+
+.btn-remove-start,
+.btn-remove-waypoint {
+  background: none;
+  border: 1px solid #333;
+  color: #555;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 1px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.btn-remove-start:hover,
+.btn-remove-waypoint:hover {
+  border-color: #ff4a4a;
+  color: #ff4a4a;
+}
 .course-item::before {
   content: '';
   width: 8px;
