@@ -15,10 +15,13 @@ $(document).ready(function () {
   };
 
   let map, ps, geocoder;
-  let startMarker = null;       // 출발지 마커
-  let startOverlay = null;      // 출발지 오버레이
-  let startPlace = null;        // 출발지 정보 { name, pos }
-  let waypoints = [];           // 경유지 배열 [{ marker, overlay, name, pos }]
+  let startMarker = null;
+  let startOverlay = null;
+  let startPlace = null;
+  let waypoints = [];
+  let savedCourses = [];
+
+  const COURSE_COLORS = ['#FEE500', '#4a9eff', '#ff6b6b', '#51cf66', '#cc5de8'];
 
   // ─── 지도 초기화 ───────────────────────────────────────────
   function initMap() {
@@ -52,14 +55,9 @@ $(document).ready(function () {
     }
   }
 
-  // ─── 지도 클릭 → 경유지 추가 ───────────────────────────────
+  // ─── 지도 클릭 → 출발지 or 경유지 추가 ───────────────────
   function addMapClickEvent() {
     kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
-      if (!startPlace) {
-        showStatus('먼저 출발지를 검색하세요');
-        return;
-      }
-
       const pos = mouseEvent.latLng;
 
       geocoder.coord2Address(pos.getLng(), pos.getLat(), function (result, status) {
@@ -76,8 +74,30 @@ $(document).ready(function () {
           }
         }
 
-        const waypointMarker = new kakao.maps.Marker({ map, position: pos });
+        if (!startPlace) {
+          if (startMarker) startMarker.setMap(null);
+          if (startOverlay) startOverlay.setMap(null);
 
+          startMarker = new kakao.maps.Marker({ map, position: pos });
+          startOverlay = new kakao.maps.CustomOverlay({
+            content: makeOverlayContent(placeName, 'start'),
+            position: pos,
+            yAnchor: 2.5
+          });
+          startOverlay.setMap(map);
+          startPlace = { name: placeName, pos };
+
+          updateCourseList();
+          showStatus(`출발지: ${placeName}`);
+          return;
+        }
+
+        if (waypoints.length >= 3) {
+          showStatus('경유지는 최대 3개까지 추가할 수 있습니다');
+          return;
+        }
+
+        const waypointMarker = new kakao.maps.Marker({ map, position: pos });
         const overlay = new kakao.maps.CustomOverlay({
           content: makeOverlayContent(placeName, 'waypoint'),
           position: pos,
@@ -106,12 +126,10 @@ $(document).ready(function () {
         const place = data[0];
         const pos = new kakao.maps.LatLng(place.y, place.x);
 
-        // 기존 출발지 마커/오버레이 제거
         if (startMarker) startMarker.setMap(null);
         if (startOverlay) startOverlay.setMap(null);
 
         startMarker = new kakao.maps.Marker({ map, position: pos });
-
         startOverlay = new kakao.maps.CustomOverlay({
           content: makeOverlayContent(place.place_name, 'start'),
           position: pos,
@@ -120,7 +138,6 @@ $(document).ready(function () {
         startOverlay.setMap(map);
 
         startPlace = { name: place.place_name, pos };
-
         map.setCenter(pos);
         map.setLevel(3);
 
@@ -138,6 +155,42 @@ $(document).ready(function () {
     navigator.geolocation.getCurrentPosition(
       pos => {
         const myPos = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+
+        if (!startPlace) {
+          geocoder.coord2Address(myPos.getLng(), myPos.getLat(), function (result, status) {
+            let placeName = '현재 위치';
+
+            if (status === kakao.maps.services.Status.OK) {
+              const addr = result[0];
+              if (addr.road_address && addr.road_address.building_name) {
+                placeName = addr.road_address.building_name;
+              } else if (addr.road_address) {
+                placeName = addr.road_address.address_name;
+              } else {
+                placeName = addr.address.address_name;
+              }
+            }
+
+            if (startMarker) startMarker.setMap(null);
+            if (startOverlay) startOverlay.setMap(null);
+
+            startMarker = new kakao.maps.Marker({ map, position: myPos });
+            startOverlay = new kakao.maps.CustomOverlay({
+              content: makeOverlayContent(placeName, 'start'),
+              position: myPos,
+              yAnchor: 2.5
+            });
+            startOverlay.setMap(map);
+            startPlace = { name: placeName, pos: myPos };
+
+            map.setCenter(myPos);
+            map.setLevel(3);
+            updateCourseList();
+            showStatus(`출발지: ${placeName}`);
+          });
+          return;
+        }
+
         map.setCenter(myPos);
         map.setLevel(3);
         showStatus('현재 위치로 이동했습니다');
@@ -160,30 +213,31 @@ $(document).ready(function () {
     });
     waypoints = [];
 
+    savedCourses.forEach(course => course.polyline.setMap(null));
+    savedCourses = [];
+
     $('#search-input').val('');
     updateCourseList();
+    updateSavedCoursePanel();
     showStatus('초기화되었습니다');
   });
 
- // ─── 저장된 코스 목록 ──────────────────────────────────────
-  let savedCourses = [];        // 저장된 코스 배열
-  let coursePolylines = [];     // 현재 지도에 표시된 폴리라인들
-
-// ─── 코스 저장 버튼 ────────────────────────────────────────
+  // ─── 코스 저장 버튼 ────────────────────────────────────────
   $('#btn-save').on('click', async () => {
     if (!startPlace) { showStatus('출발지를 먼저 설정하세요'); return; }
     if (waypoints.length === 0) { showStatus('경유지를 1개 이상 추가하세요'); return; }
 
     showStatus('경로를 불러오는 중...');
 
-    // 순환 코스 좌표: 출발지 → 경유지들 → 출발지
+    // 색상은 현재 저장된 코스 수 기준으로 순환
+    const color = COURSE_COLORS[savedCourses.length % COURSE_COLORS.length];
+
     const points = [
       startPlace.pos,
       ...waypoints.map(wp => wp.pos),
       startPlace.pos
     ];
 
-    // OSRM 좌표 문자열 생성 (lng,lat;lng,lat 형식)
     const coords = points
       .map(p => `${p.getLng()},${p.getLat()}`)
       .join(';');
@@ -199,26 +253,22 @@ $(document).ready(function () {
         return;
       }
 
-      // GeoJSON 좌표 → 카카오 LatLng 변환
       const routeCoords = data.routes[0].geometry.coordinates.map(
         ([lng, lat]) => new kakao.maps.LatLng(lat, lng)
       );
 
-      // 폴리라인 그리기
       const polyline = new kakao.maps.Polyline({
         map: map,
         path: routeCoords,
         strokeWeight: 5,
-        strokeColor: '#FEE500',
+        strokeColor: color,
         strokeOpacity: 0.9,
         strokeStyle: 'solid'
       });
 
-      // 거리 계산 (미터 → km)
       const distanceKm = (data.routes[0].distance / 1000).toFixed(2);
       const durationMin = Math.round(data.routes[0].duration / 60);
 
-      // 코스 저장
       const course = {
         id: Date.now(),
         name: `코스 ${savedCourses.length + 1}`,
@@ -227,12 +277,29 @@ $(document).ready(function () {
         polyline,
         visible: true,
         distance: distanceKm,
-        duration: durationMin
+        duration: durationMin,
+        color
       };
 
       savedCourses.push(course);
       updateSavedCoursePanel();
       showStatus(`${course.name} 저장됨 · ${distanceKm}km`);
+
+      // 저장 후 출발지/경유지 마커 초기화 (다음 코스 설정 위해)
+      if (startMarker) startMarker.setMap(null);
+      if (startOverlay) startOverlay.setMap(null);
+      startMarker = null;
+      startOverlay = null;
+      startPlace = null;
+
+      waypoints.forEach(wp => {
+        wp.marker.setMap(null);
+        wp.overlay.setMap(null);
+      });
+      waypoints = [];
+
+      $('#search-input').val('');
+      updateCourseList();
 
     } catch (e) {
       console.error(e);
@@ -240,33 +307,43 @@ $(document).ready(function () {
     }
   });
 
-  // // ─── 저장된 코스 패널 업데이트 ────────────────────────────
-  // function updateSavedCoursePanel() {
-  //   const $panel = $('#saved-courses-panel');
+  // ─── 저장된 코스 패널 업데이트 ────────────────────────────
+  function updateSavedCoursePanel() {
+    const $panel = $('#saved-courses-panel');
 
-  //   if (savedCourses.length === 0) {
-  //     $panel.hide();
-  //     return;
-  //   }
+    if (savedCourses.length === 0) {
+      $panel.hide();
+      return;
+    }
 
-  //   $panel.show();
-  //   const $list = $('#saved-courses-list');
-  //   $list.empty();
+    $panel.show();
+    const $list = $('#saved-courses-list');
+    $list.empty();
 
-  //   savedCourses.forEach(course => {
-  //     $list.append(`
-  //       <li class="saved-course-item" data-id="${course.id}">
-  //         <div class="saved-course-info">
-  //           <span class="saved-course-name">${course.name}</span>
-  //           <span class="saved-course-detail">${course.start} 외 ${course.waypoints.length}개 경유</span>
-  //         </div>
-  //         <button class="btn-toggle-course ${course.visible ? 'on' : 'off'}" data-id="${course.id}">
-  //           ${course.visible ? '켜짐' : '꺼짐'}
-  //         </button>
-  //       </li>
-  //     `);
-  //   });
-  // }
+    savedCourses.forEach(course => {
+      $list.append(`
+        <li class="saved-course-item" data-id="${course.id}">
+          <div class="saved-course-info">
+            <div class="saved-course-header">
+              <div class="left">
+               
+                <button 
+                  class="saved-course-name btn-toggle-course ${course.visible ? 'on' : 'off'}"
+                  style="background-color: ${course.color};"
+                  data-id="${course.id}">
+                  ${course.name}
+                </button>
+              </div>
+              <button class="btn-delete-course" data-id="${course.id}">−</button>
+            </div>
+            <span class="saved-course-detail">
+              ${course.distance}km · ${course.duration}분 · ${course.waypoints.length}개 경유
+            </span>
+          </div>
+        </li>
+      `);
+    });
+  }
 
   // ─── 코스 표시/숨김 토글 ──────────────────────────────────
   $(document).on('click', '.btn-toggle-course', function () {
@@ -279,11 +356,27 @@ $(document).ready(function () {
     updateSavedCoursePanel();
   });
 
+  // ─── 코스 삭제 ─────────────────────────────────────────────
+  $(document).on('click', '.btn-delete-course', function () {
+    const id = parseInt($(this).data('id'));
+    const idx = savedCourses.findIndex(c => c.id === id);
+    if (idx === -1) return;
+
+    savedCourses[idx].polyline.setMap(null);
+    savedCourses.splice(idx, 1);
+
+    // 코스 이름 재번호
+    savedCourses.forEach((c, i) => { c.name = `코스 ${i + 1}`; });
+
+    updateSavedCoursePanel();
+    showStatus('코스가 삭제되었습니다');
+  });
+
   // ─── 저장된 코스 패널 토글 버튼 ───────────────────────────
   $('#btn-courses').on('click', () => {
     $('#saved-courses-panel').slideToggle(200);
   });
-  
+
   // ─── 패널 코스 목록 업데이트 ───────────────────────────────
   function updateCourseList() {
     const $list = $('#course-list');
@@ -294,7 +387,6 @@ $(document).ready(function () {
       return;
     }
 
-    // 출발지 (취소 버튼으로 전체 출발지 초기화)
     $list.append(`
       <li class="course-item start">
         <span>${startPlace.name}</span>
@@ -302,7 +394,6 @@ $(document).ready(function () {
       </li>
     `);
 
-    // 경유지
     waypoints.forEach((wp, i) => {
       $list.append(`
         <li class="course-item waypoint" data-index="${i}">
@@ -320,8 +411,19 @@ $(document).ready(function () {
     startMarker = null;
     startOverlay = null;
     startPlace = null;
+
+    waypoints.forEach(wp => {
+      wp.marker.setMap(null);
+      wp.overlay.setMap(null);
+    });
+    waypoints = [];
+
+    savedCourses.forEach(course => course.polyline.setMap(null));
+    savedCourses = [];
+
     $('#search-input').val('');
     updateCourseList();
+    updateSavedCoursePanel();
     showStatus('출발지가 삭제되었습니다');
   });
 

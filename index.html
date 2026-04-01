@@ -20,9 +20,20 @@
   </div>
 
   <!-- 지도 -->
-  <div id="map"></div>
+  <div id="map">
+
+  <button id="btn-courses">📂</button>
+    <!--  저장된 코스 패널 (지도 위에 뜸) -->
+    <div id="saved-courses-panel">
+      <div class="panel-title">저장된 코스</div>
+      <ul id="saved-courses-list"></ul>
+    </div>
+
+  </div>
   <div id="map-hint">지도를 클릭해 경유지를 추가하세요</div>
 
+
+ 
   <!-- 하단 패널 -->
   <div id="panel">
 
@@ -48,10 +59,14 @@
 
     <!-- 코스 목록 -->
     <div id="course-list-wrap">
-      <div class="panel-title">코스</div>
+      <div class="panel-title">코스
+
+      </div>
+
       <ul id="course-list">
         <li class="course-item empty">출발지를 검색하세요</li>
       </ul>
+      
     </div>
 
     <!-- 버튼 -->
