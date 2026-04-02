@@ -279,7 +279,7 @@ $(document).ready(function () {
       const color = type==='start' ? '#111' : '#fff';
       return `<div style="padding:5px 10px;font-size:12px;font-weight:700;white-space:nowrap;background:${bg};border-radius:4px;color:${color}">${name}</div>`;
     }
-
+    
     // ─── 상태 메시지 ───────────────────────────────────────
     function showStatus(msg) {
       clearTimeout(statusTimer);
