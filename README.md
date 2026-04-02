@@ -1,0 +1,21 @@
+# 🗺️ 산책 코스 만들기
+
+카카오맵 기반의 나만의 산책 코스 생성 웹 앱입니다.
+
+## 주요 기능
+- 지도 클릭 / 장소 검색 / 현재 위치로 출발지·경유지 설정
+- 최대 3개 경유지로 도보 코스 자동 생성
+- 여러 코스 저장·비교·삭제
+
+## 사용 기술
+| 기술 | 용도 |
+|---|---|
+| Kakao Maps JavaScript API | 지도 렌더링, 장소 검색, 주소 변환 |
+| OSRM (Open Source Routing Machine) | 도보 경로 계산 및 거리/소요시간 산출 |
+| jQuery | DOM 조작 및 이벤트 처리 |
+
+## OSRM 활용
+[OSRM](https://project-osrm.org/) 공개 API(`router.project-osrm.org`)를  
+`/route/v1/foot/` 엔드포인트로 호출해 출발지→경유지→출발지 복귀의  
+도보 경로 GeoJSON을 받아 카카오맵 Polyline으로 시각화했습니다.
+
