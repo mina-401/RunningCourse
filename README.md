@@ -15,8 +15,9 @@
 | 기술 | 용도 |
 |---|---|
 | Kakao Maps JavaScript API | 지도 렌더링, 장소 검색, 주소 변환 |
-| OSRM (Open Source Routing Machine) | 도보 경로 계산 및 거리/소요시간 산출 |
-| jQuery | DOM 조작 및 이벤트 처리 |
+| OSRM | 도보 경로 계산 및 거리/소요시간 산출 |
+| jQuery | DOM 조작, 이벤트 처리 |
+| Ajax | OSRM API 비동기 통신 |
 
 ## OSRM 활용
 [OSRM](https://project-osrm.org/) 공개 API(`router.project-osrm.org`)를  
