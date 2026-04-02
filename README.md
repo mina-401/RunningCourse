@@ -2,6 +2,10 @@
 
 카카오맵 기반의 나만의 산책 코스 생성 웹 앱입니다.
 
+[![Demo](https://img.shields.io/badge/🗺️_데모_보기-live-brightgreen)](https://mina-401.github.io/RunningCourse/)
+<br>
+<img src="resources/readme_screenshot.png" width="400"/>
+
 ## 주요 기능
 - 지도 클릭 / 장소 검색 / 현재 위치로 출발지·경유지 설정
 - 최대 3개 경유지로 도보 코스 자동 생성
