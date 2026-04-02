@@ -191,10 +191,12 @@ $(document).ready(function () {
     function updateSavedCoursePanel() {
       const $panel = $('#saved-courses-panel');
       const $list = $('#saved-courses-list');
+
+      $list.empty(); // ← 항상 먼저 비우기
       if (savedCourses.length === 0) return $panel.hide();
 
       $panel.show();
-      $list.empty();
+      
       savedCourses.forEach(course => {
         $list.append(`
           <li class="saved-course-item" data-id="${course.id}">
