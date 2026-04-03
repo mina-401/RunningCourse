@@ -6,6 +6,17 @@
 <br>
 <img src="resources/readme_screenshot.png" width="400"/>
 
+## 흐름 요약
+사용자가 저장 버튼 클릭<br>
+        ↓<br>
+출발지 + 경유지 + 출발지(복귀) 좌표 조립<br>
+        ↓<br>
+OSRM 서버에 도보 경로 요청<br>
+        ↓<br>
+응답받은 경로 좌표 → 카카오 지도에 노란 선으로 표시<br>
+        ↓<br>
+거리(km) + 소요시간(분) 계산해서 코스로 저장<br>
+
 ## 주요 기능
 - 지도 클릭 / 장소 검색 / 현재 위치로 출발지·경유지 설정
 - 최대 3개 경유지로 도보 코스 자동 생성
@@ -23,6 +34,8 @@
 [OSRM](https://project-osrm.org/) 공개 API(`router.project-osrm.org`)를  
 `/route/v1/foot/` 엔드포인트로 호출해 출발지→경유지→출발지 복귀의  
 도보 경로 GeoJSON을 받아 카카오맵 Polyline으로 시각화했습니다.
+
+
 
 ## 추후 개선 사항
 - [ ] 실시간 운동 트래킹 기능
